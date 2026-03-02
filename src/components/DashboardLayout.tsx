@@ -9,6 +9,7 @@ type NavItem = { href: string; label: string };
 const adminNav: NavItem[] = [
   { href: "/dashboard/admin", label: "Tableau de bord" },
   { href: "/dashboard/admin/clients", label: "Comptes clients" },
+  { href: "/dashboard/admin/comptes-bancaires", label: "Comptes bancaires" },
   { href: "/dashboard/admin/agents", label: "Comptes responsables" },
   { href: "/dashboard/admin/demandes", label: "Demandes & affectation" },
   { href: "/dashboard/admin/statistiques", label: "Statistiques" },

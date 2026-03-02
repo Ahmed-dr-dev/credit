@@ -26,10 +26,19 @@ export default function ClientDemande() {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [docsCount, setDocsCount] = useState(0);
   const [form, setForm] = useState({ type_credit_id: "", type_nom: "", montant: "", duree: "" });
+  const [compteBancaireActif, setCompteBancaireActif] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!loading && (!isAuthenticated || role !== "client")) router.push("/signin");
   }, [isAuthenticated, role, loading, router]);
+
+  useEffect(() => {
+    if (role !== "client") return;
+    fetch("/api/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((p) => setCompteBancaireActif(p?.compte_bancaire_actif ?? null))
+      .catch(() => setCompteBancaireActif(null));
+  }, [role]);
 
   useEffect(() => {
     if (role !== "client") return;
@@ -80,8 +89,16 @@ export default function ClientDemande() {
     ? `/dashboard/client/rendez-vous?demande=${derniere.id}&motif=Discussion%20statut%20dossier%20cr%C3%A9dit&fromDocs=1`
     : "/dashboard/client/rendez-vous";
 
+  const pendingBank = compteBancaireActif === false;
+
   return (
     <DashboardLayout role="client" title="Ma demande de crédit">
+      {pendingBank && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+          <p className="font-medium">Compte en attente de compte bancaire</p>
+          <p className="text-sm mt-1">Vous devez vous présenter en agence pour que l&apos;administrateur crée votre compte bancaire. Une fois activé, vous pourrez déposer une demande de crédit.</p>
+        </div>
+      )}
       <PageIntro
         title="Ma demande de crédit"
         description="Déposez une nouvelle demande ou consultez le suivi détaillé de votre demande."
@@ -90,7 +107,9 @@ export default function ClientDemande() {
       <div className="space-y-8 max-w-2xl">
         <section className="bg-white rounded-xl border border-slate-200 p-6 shadow-card">
           <h3 className="text-base font-semibold text-slate-800 mb-2">Déposer une demande</h3>
-          <p className="text-slate-600 text-sm mb-4">Renseignez le type, le montant et la durée souhaités.</p>
+          <p className="text-slate-600 text-sm mb-4">
+            {pendingBank ? "Activez d&apos;abord votre compte bancaire en agence pour déposer une demande." : "Renseignez le type, le montant et la durée souhaités."}
+          </p>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Type de crédit</label>
@@ -138,7 +157,8 @@ export default function ClientDemande() {
             </div>
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl bg-primary-600 text-white font-medium hover:bg-primary-700"
+              disabled={pendingBank}
+              className="px-5 py-2.5 rounded-xl bg-primary-600 text-white font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Déposer la demande
             </button>

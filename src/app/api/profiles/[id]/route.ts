@@ -15,6 +15,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (nom != null) update.nom = String(nom).trim();
   if (email != null) update.email = String(email).toLowerCase().trim();
   if (telephone !== undefined) update.telephone = telephone?.trim() || null;
+  if (body.compte_bancaire_actif !== undefined) update.compte_bancaire_actif = !!body.compte_bancaire_actif;
   if (password?.trim()) {
     const bcrypt = await import("bcryptjs");
     update.password_hash = await bcrypt.hash(password.trim(), 10);
@@ -28,7 +29,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     .from("profiles")
     .update(update)
     .eq("id", id)
-    .select("id, email, role, prenom, nom, telephone")
+    .select("id, email, role, prenom, nom, telephone, compte_bancaire_actif")
     .single();
 
   if (error) {

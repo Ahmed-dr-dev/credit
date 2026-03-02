@@ -26,16 +26,36 @@ CREATE TYPE rdv_statut AS ENUM ('demande', 'confirme', 'reporte', 'passe');
 -- ============================================
 CREATE TABLE profiles (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   role app_role NOT NULL,
   prenom TEXT NOT NULL,
   nom TEXT NOT NULL,
   email TEXT NOT NULL,
   telephone TEXT,
+  compte_bancaire_actif BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(user_id)
 );
+
+-- For existing DB: ALTER TABLE profiles ADD COLUMN IF NOT EXISTS compte_bancaire_actif BOOLEAN DEFAULT false;
+
+-- ============================================
+-- 3b. Comptes bancaires (créés en agence par l'admin)
+-- ============================================
+CREATE TABLE comptes_bancaires (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  client_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  numero_compte TEXT NOT NULL,
+  iban TEXT,
+  banque TEXT NOT NULL,
+  date_ouverture DATE DEFAULT CURRENT_DATE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(client_id)
+);
+
+CREATE INDEX idx_comptes_bancaires_client ON comptes_bancaires(client_id);
 
 -- ============================================
 -- 4. Types de crédit
@@ -151,6 +171,8 @@ CREATE TRIGGER demandes_updated_at BEFORE UPDATE ON demandes
 CREATE TRIGGER reclamations_updated_at BEFORE UPDATE ON reclamations
   FOR EACH ROW EXECUTE PROCEDURE update_updated_at();
 CREATE TRIGGER rendez_vous_updated_at BEFORE UPDATE ON rendez_vous
+  FOR EACH ROW EXECUTE PROCEDURE update_updated_at();
+CREATE TRIGGER comptes_bancaires_updated_at BEFORE UPDATE ON comptes_bancaires
   FOR EACH ROW EXECUTE PROCEDURE update_updated_at();
 
 -- ============================================

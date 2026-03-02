@@ -1043,11 +1043,19 @@ video {
   --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
+.from-amber-400 {
+  --tw-gradient-from: #fbbf24 var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(251 191 36 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
 .to-primary-600 {
   --tw-gradient-to: var(--primary-600) var(--tw-gradient-to-position);
 }
 .to-white {
   --tw-gradient-to: #fff var(--tw-gradient-to-position);
+}
+.to-amber-600 {
+  --tw-gradient-to: #d97706 var(--tw-gradient-to-position);
 }
 .bg-grid {
   background-size: 24px 24px;
@@ -1176,6 +1184,9 @@ video {
 .text-right {
   text-align: right;
 }
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
 .text-2xl {
   font-size: 1.5rem;
   line-height: 2rem;
@@ -1287,6 +1298,10 @@ video {
   --tw-text-opacity: 1;
   color: rgb(255 255 255 / var(--tw-text-opacity, 1));
 }
+.text-amber-900 {
+  --tw-text-opacity: 1;
+  color: rgb(120 53 15 / var(--tw-text-opacity, 1));
+}
 .shadow-card {
   --tw-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
   --tw-shadow-colored: 0 1px 3px 0 var(--tw-shadow-color), 0 1px 2px -1px var(--tw-shadow-color);
@@ -1374,6 +1389,10 @@ button:focus-visible {
   color: rgb(51 65 85 / var(--tw-text-opacity, 1));
 }
 
+.last\:border-0:last-child {
+  border-width: 0px;
+}
+
 .hover\:border-primary-200:hover {
   border-color: var(--primary-200);
 }
@@ -1416,6 +1435,11 @@ button:focus-visible {
 
 .hover\:bg-slate-50\/50:hover {
   background-color: rgb(248 250 252 / 0.5);
+}
+
+.hover\:bg-amber-200:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(253 230 138 / var(--tw-bg-opacity, 1));
 }
 
 .hover\:text-primary-600:hover {

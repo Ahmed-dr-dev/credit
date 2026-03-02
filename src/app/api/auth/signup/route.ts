@@ -25,6 +25,7 @@ export async function POST(req: Request) {
         prenom: prenom.trim(),
         nom: nom.trim(),
         telephone: telephone?.trim() || null,
+        compte_bancaire_actif: false,
       })
       .select("id, email, role")
       .single();

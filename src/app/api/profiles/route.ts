@@ -9,7 +9,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const role = searchParams.get("role");
 
-  let q = supabase.from("profiles").select("id, email, role, prenom, nom, telephone").order("nom");
+  let q = supabase.from("profiles").select("id, email, role, prenom, nom, telephone, compte_bancaire_actif").order("nom");
 
   if (role) q = q.eq("role", role);
   const { data, error } = await q;
@@ -43,8 +43,9 @@ export async function POST(req: Request) {
     telephone: telephone?.trim() || null,
   };
   if (password_hash) insert.password_hash = password_hash;
+  if (role === "client") insert.compte_bancaire_actif = false;
 
-  const { data, error } = await supabase.from("profiles").insert(insert).select("id, email, role, prenom, nom, telephone").single();
+  const { data, error } = await supabase.from("profiles").insert(insert).select("id, email, role, prenom, nom, telephone, compte_bancaire_actif").single();
 
   if (error) {
     if (error.code === "23505") return NextResponse.json({ error: "Cet email existe déjà" }, { status: 409 });

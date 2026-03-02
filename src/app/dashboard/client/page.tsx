@@ -48,10 +48,19 @@ export default function ClientDashboard() {
   const [docsCount, setDocsCount] = useState(0);
   const [prochainRdv, setProchainRdv] = useState<RDV | null>(null);
   const [nouveautesCount, setNouveautesCount] = useState(0);
+  const [compteBancaireActif, setCompteBancaireActif] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!loading && (!isAuthenticated || role !== "client")) router.push("/signin");
   }, [isAuthenticated, role, loading, router]);
+
+  useEffect(() => {
+    if (role !== "client") return;
+    fetch("/api/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((p) => setCompteBancaireActif(p?.compte_bancaire_actif ?? null))
+      .catch(() => setCompteBancaireActif(null));
+  }, [role]);
 
   useEffect(() => {
     if (role !== "client") return;
@@ -98,6 +107,12 @@ export default function ClientDashboard() {
 
   return (
     <DashboardLayout role="client" title="Mon espace">
+      {compteBancaireActif === false && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+          <p className="font-medium">Compte en attente</p>
+          <p className="text-sm mt-1">Votre compte a été créé. Pour activer votre compte bancaire et déposer une demande de crédit, présentez-vous en agence avec une pièce d&apos;identité. L&apos;administrateur activera votre compte après création du compte bancaire.</p>
+        </div>
+      )}
       {/* Welcome */}
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>

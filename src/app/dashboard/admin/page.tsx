@@ -12,7 +12,7 @@ const inputClass =
 export default function AdminDashboard() {
   const { isAuthenticated, role, loading } = useAuth();
   const router = useRouter();
-  const [stats, setStats] = useState({ attente: 0, enCours: 0, clients: 0, responsables: 0 });
+  const [stats, setStats] = useState({ attente: 0, enCours: 0, clients: 0, responsables: 0, enAttenteBank: 0 });
 
   useEffect(() => {
     if (!loading && (!isAuthenticated || role !== "admin")) router.push("/signin");
@@ -29,7 +29,8 @@ export default function AdminDashboard() {
       const enCours = demandes.filter((d: { statut: string }) =>
         ["en_cours_etude", "en_attente_infos"].includes(d.statut)
       ).length;
-      setStats({ attente, enCours, clients: clients.length, responsables: agents.length });
+      const enAttenteBank = clients.filter((c: { compte_bancaire_actif?: boolean }) => !c.compte_bancaire_actif).length;
+      setStats({ attente, enCours, clients: clients.length, responsables: agents.length, enAttenteBank });
     });
   }, [role]);
 
@@ -53,6 +54,14 @@ export default function AdminDashboard() {
         </Link>
         <Link href="/dashboard/admin/agents" className="block">
           <Card title="Comptes responsables" value={String(stats.responsables)} />
+        </Link>
+        <Link href="/dashboard/admin/comptes-bancaires" className="block">
+          <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-card hover:shadow-cardHover transition overflow-hidden group">
+            <div className="w-full h-1 -mx-5 -mt-5 mb-4 bg-gradient-to-r from-amber-400 to-amber-600" />
+            <p className="text-sm text-slate-500">En attente compte bancaire</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-800">{stats.enAttenteBank}</p>
+            <p className="text-xs text-slate-500 mt-0.5">Présentés en agence pour activation</p>
+          </div>
         </Link>
       </div>
       <div className="mt-8 flex flex-wrap gap-3">
