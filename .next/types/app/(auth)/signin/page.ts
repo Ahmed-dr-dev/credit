@@ -1,4 +1,4 @@
-// File: C:\Users\aahme\OneDrive\Desktop\Credit\src\app\(auth)\signin\page.tsx
+// File: C:\Users\aahme\project\credit\src\app\(auth)\signin\page.tsx
 import * as entry from '../../../../../src/app/(auth)/signin/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

@@ -1,18 +1,9 @@
 {
-  "/api/auth/signout/route": "app/api/auth/signout/route.js",
-  "/api/profiles/route": "app/api/profiles/route.js",
-  "/dashboard/admin/clients/page": "app/dashboard/admin/clients/page.js",
-  "/dashboard/admin/comptes-bancaires/page": "app/dashboard/admin/comptes-bancaires/page.js",
-  "/api/comptes-bancaires/route": "app/api/comptes-bancaires/route.js",
-  "/dashboard/admin/reclamations/page": "app/dashboard/admin/reclamations/page.js",
-  "/dashboard/admin/types-credit/page": "app/dashboard/admin/types-credit/page.js",
   "/page": "app/page.js",
-  "/(auth)/signin/page": "app/(auth)/signin/page.js",
-  "/api/auth/signin/route": "app/api/auth/signin/route.js",
   "/api/auth/session/route": "app/api/auth/session/route.js",
-  "/dashboard/client/page": "app/dashboard/client/page.js",
-  "/api/me/route": "app/api/me/route.js",
+  "/dashboard/admin/page": "app/dashboard/admin/page.js",
   "/api/demandes/route": "app/api/demandes/route.js",
-  "/api/rendez-vous/route": "app/api/rendez-vous/route.js",
-  "/api/nouveautes/route": "app/api/nouveautes/route.js"
+  "/api/auth/signin/route": "app/api/auth/signin/route.js",
+  "/(auth)/signin/page": "app/(auth)/signin/page.js",
+  "/api/profiles/route": "app/api/profiles/route.js"
 }
