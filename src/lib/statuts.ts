@@ -20,6 +20,8 @@ export const DOCUMENT_STATUTS: Record<string, string> = {
 
 export const RDV_STATUTS: Record<string, string> = {
   demande: "Demandé",
+  alt_agent: "Alternative proposée (conseiller)",
+  contre_client: "Contre-proposition (client)",
   confirme: "Confirmé",
   reporte: "Reporté",
   passe: "Passé",

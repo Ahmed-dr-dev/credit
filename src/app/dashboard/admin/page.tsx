@@ -69,6 +69,7 @@ export default function AdminDashboard() {
         <Link href="/dashboard/admin/reclamations" className="px-4 py-2 rounded-lg bg-primary-50 text-primary-700 font-medium text-sm hover:bg-primary-100 transition">Réclamations</Link>
         <Link href="/dashboard/admin/demandes" className="px-4 py-2 rounded-lg bg-primary-50 text-primary-700 font-medium text-sm hover:bg-primary-100 transition">Demandes & affectation</Link>
         <Link href="/dashboard/admin/types-credit" className="px-4 py-2 rounded-lg bg-primary-50 text-primary-700 font-medium text-sm hover:bg-primary-100 transition">Types de crédit</Link>
+        <Link href="/dashboard/admin/assistant" className="px-4 py-2 rounded-lg bg-primary-50 text-primary-700 font-medium text-sm hover:bg-primary-100 transition">Assistant Q&A</Link>
       </div>
     </DashboardLayout>
   );

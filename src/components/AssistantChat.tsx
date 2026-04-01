@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 type Message = { id: string; role: "user" | "assistant"; text: string; date: Date };
 
@@ -162,25 +162,49 @@ const QA: QARule[] = [
 const FALLBACK =
   "Je n'ai pas trouvé de réponse précise à votre question. Vous pouvez reformuler ou consulter la page « Documentation & types de crédit » après connexion. Pour un suivi personnalisé de votre dossier, connectez-vous et utilisez « Ma demande » ou réservez un rendez-vous avec votre conseiller.";
 
-function getResponse(userText: string): string {
+function getResponse(userText: string, dynamic: QARule[]): string {
   const normalized = normalize(userText);
   if (!normalized.trim()) return FALLBACK;
-  for (const { keywords, response } of QA) {
+  const all = dynamic.length > 0 ? dynamic : QA;
+  for (const { keywords, response } of all) {
     if (keywords.some((k) => normalized.includes(normalize(k)))) return response;
   }
   return FALLBACK;
 }
 
-export default function AssistantChat() {
+type RemoteQA = { id: string; keywords: string; response: string };
+
+type AssistantChatProps = {
+  compact?: boolean;
+};
+
+export default function AssistantChat({ compact = false }: AssistantChatProps) {
   const [messages, setMessages] = useState<Message[]>([initialMessage]);
   const [input, setInput] = useState("");
+  const [dynamicQA, setDynamicQA] = useState<QARule[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch("/api/assistant-qa")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: RemoteQA[]) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setDynamicQA(
+            data.map((d) => ({
+              keywords: d.keywords.split(",").map((k) => k.trim()).filter(Boolean),
+              response: d.response,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const sendQuestion = (text: string) => {
+  const sendQuestion = useCallback((text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
     const userMsg: Message = {
@@ -191,7 +215,7 @@ export default function AssistantChat() {
     };
     setMessages((m) => [...m, userMsg]);
     setInput("");
-    const reply = getResponse(trimmed);
+    const reply = getResponse(trimmed, dynamicQA);
     setTimeout(() => {
       setMessages((m) => [
         ...m,
@@ -203,7 +227,7 @@ export default function AssistantChat() {
         },
       ]);
     }, 400);
-  };
+  }, [dynamicQA]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,8 +235,8 @@ export default function AssistantChat() {
   };
 
   return (
-    <div className="flex flex-col h-[420px] w-full max-w-2xl mx-auto">
-      <div className="flex-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-4 space-y-4 mb-4 shadow-card">
+    <div className={`flex flex-col w-full ${compact ? "h-[460px]" : "h-[420px] max-w-2xl mx-auto"}`}>
+      <div className={`flex-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-4 space-y-4 ${compact ? "mb-3" : "mb-4"} shadow-card`}>
         {messages.map((msg) => (
           <div
             key={msg.id}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+import FloatingAssistant from "@/components/FloatingAssistant";
 
 export const metadata: Metadata = {
   title: "Gestion des Demandes de Crédit",
@@ -15,7 +16,10 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          {children}
+          <FloatingAssistant />
+        </AuthProvider>
       </body>
     </html>
   );

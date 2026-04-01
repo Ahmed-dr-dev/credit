@@ -19,37 +19,56 @@ type RDV = {
   agent?: { prenom: string; nom: string };
 };
 
+const STATUT_STYLE: Record<string, string> = {
+  confirme: "bg-green-100 text-green-800",
+  passe: "bg-slate-100 text-slate-600",
+  reporte: "bg-amber-100 text-amber-800",
+  alt_agent: "bg-blue-100 text-blue-800",
+  contre_client: "bg-orange-100 text-orange-800",
+  demande: "bg-primary-100 text-primary-800",
+};
+
 function RendezVousContent() {
   const { isAuthenticated, role, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const [agents, setAgents] = useState<Agent[]>([]);
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [rdvs, setRdvs] = useState<RDV[]>([]);
+
   const demandeParam = searchParams.get("demande") ?? "";
   const motifParam = searchParams.get("motif") || "";
+
   const [form, setForm] = useState({
     agent_id: "",
     demande_id: demandeParam,
     motif: motifParam ? decodeURIComponent(motifParam) : "Discussion statut dossier crédit",
+    date_demandee: "",
   });
+
+  // Counter-proposal state
+  const [contreId, setContreId] = useState<string | null>(null);
+  const [contreDate, setContreDate] = useState("");
 
   useEffect(() => {
     if (!loading && (!isAuthenticated || role !== "client")) router.push("/signin");
   }, [isAuthenticated, role, loading, router]);
 
-  useEffect(() => {
+  const load = () => {
     if (role !== "client") return;
     Promise.all([
       fetch("/api/agents", { credentials: "include" }).then((r) => (r.ok ? r.json() : [])),
       fetch("/api/demandes", { credentials: "include" }).then((r) => (r.ok ? r.json() : [])),
       fetch("/api/rendez-vous", { credentials: "include" }).then((r) => (r.ok ? r.json() : [])),
-    ]).then(([a, d, r]) => {
+    ]).then(([a, d, rv]) => {
       setAgents(a);
       setDemandes(d);
-      setRdvs(r);
+      setRdvs(rv);
     });
-  }, [role]);
+  };
+
+  useEffect(() => { load(); }, [role]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setForm((f) => ({
@@ -70,12 +89,28 @@ function RendezVousContent() {
         agent_id: form.agent_id,
         demande_id: form.demande_id || null,
         motif: form.motif.trim(),
+        date_demandee: form.date_demandee ? new Date(form.date_demandee).toISOString() : null,
       }),
     });
     if (r.ok) {
       const data = await r.json();
       setRdvs((prev) => [data, ...prev]);
-      setForm({ agent_id: "", demande_id: "", motif: "Discussion statut dossier crédit" });
+      setForm({ agent_id: "", demande_id: "", motif: "Discussion statut dossier crédit", date_demandee: "" });
+    }
+  };
+
+  const patch = async (id: string, body: Record<string, unknown>) => {
+    const r = await fetch(`/api/rendez-vous/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(body),
+    });
+    if (r.ok) {
+      const data = await r.json();
+      setRdvs((prev) => prev.map((rv) => (rv.id === id ? { ...rv, ...data } : rv)));
+      setContreId(null);
+      setContreDate("");
     }
   };
 
@@ -85,6 +120,7 @@ function RendezVousContent() {
   if (!isAuthenticated || role !== "client") return null;
 
   const fromDocs = searchParams.get("fromDocs") === "1";
+  const pendingAlt = rdvs.filter((r) => r.statut === "alt_agent");
 
   return (
     <DashboardLayout role="client" title="Rendez-vous">
@@ -97,16 +133,92 @@ function RendezVousContent() {
       {fromDocs && (
         <div className="mb-6 p-4 rounded-xl bg-primary-50 border border-primary-100">
           <p className="text-primary-800 text-sm font-medium">
-            Vos documents sont déposés. Réservez un rendez-vous pour faire le point sur votre demande avec votre conseiller.
+            Vos documents sont déposés. Réservez un rendez-vous pour faire le point sur votre demande.
           </p>
         </div>
       )}
 
+      {/* ── Alertes alternatives en attente ── */}
+      {pendingAlt.map((r) => (
+        <div
+          key={r.id}
+          className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-3"
+        >
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <p className="font-semibold text-blue-900 text-sm">
+                Votre conseiller{r.agent ? ` (${r.agent.prenom} ${r.agent.nom})` : ""} propose une alternative
+              </p>
+              <p className="text-blue-800 text-sm mt-1">
+                Nouvelle date proposée :{" "}
+                <strong>{dateStr(r.date_proposee)}</strong>
+              </p>
+              <p className="text-blue-700 text-xs mt-0.5">
+                Votre demande initiale était : {dateStr(r.date_demandee)}
+              </p>
+            </div>
+          </div>
+
+          {contreId === r.id ? (
+            <div className="space-y-2 pt-1">
+              <p className="text-sm font-medium text-blue-900">Contre-proposer une autre date :</p>
+              <input
+                type="datetime-local"
+                value={contreDate}
+                min={new Date(Date.now() + 86400000).toISOString().slice(0, 16)}
+                onChange={(e) => setContreDate(e.target.value)}
+                className="w-full sm:w-72 px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary-500/30 outline-none text-sm"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={!contreDate}
+                  onClick={() =>
+                    patch(r.id, {
+                      statut: "contre_client",
+                      date_demandee: new Date(contreDate).toISOString(),
+                    })
+                  }
+                  className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50 transition"
+                >
+                  Envoyer ma contre-proposition
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setContreId(null); setContreDate(""); }}
+                  className="px-4 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm hover:bg-slate-50 transition"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => patch(r.id, { statut: "confirme" })}
+                className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition"
+              >
+                Accepter cette date
+              </button>
+              <button
+                type="button"
+                onClick={() => { setContreId(r.id); setContreDate(""); }}
+                className="px-4 py-2 rounded-lg bg-white border border-blue-300 text-blue-700 text-sm font-medium hover:bg-blue-50 transition"
+              >
+                Proposer une autre date
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+
       <div className="space-y-8 max-w-2xl">
+        {/* ── Formulaire ── */}
         <section className="bg-white rounded-xl border border-slate-200 p-6 shadow-card">
           <h3 className="text-base font-semibold text-slate-800 mb-2">Demander un rendez-vous</h3>
           <p className="text-slate-600 text-sm mb-4">
-            Choisissez votre conseiller, liez éventuellement votre demande de crédit et indiquez le motif (ex. discussion statut dossier).
+            Choisissez votre conseiller, précisez une date souhaitée et indiquez le motif.
           </p>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -125,10 +237,11 @@ function RendezVousContent() {
                 ))}
               </select>
             </div>
+
             {demandes.length > 0 && (
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Lier à une demande (recommandé pour discuter du statut)
+                  Lier à une demande (recommandé)
                 </label>
                 <select
                   value={form.demande_id}
@@ -144,6 +257,28 @@ function RendezVousContent() {
                 </select>
               </div>
             )}
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Date souhaitée
+              </label>
+              <input
+                type="datetime-local"
+                value={form.date_demandee}
+                min={new Date(Date.now() + 86400000).toISOString().slice(0, 16)}
+                onChange={(e) => setForm((f) => ({ ...f, date_demandee: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary-500/30 outline-none"
+              />
+              {form.date_demandee && (
+                <p className="mt-1 text-xs text-slate-400">
+                  {new Date(form.date_demandee).toLocaleString("fr-FR", {
+                    dateStyle: "long",
+                    timeStyle: "short",
+                  })}
+                </p>
+              )}
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Motif</label>
               <textarea
@@ -155,43 +290,56 @@ function RendezVousContent() {
                 placeholder="Ex. Discussion statut dossier crédit, pièces complémentaires"
               />
             </div>
+
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl bg-primary-600 text-white font-medium hover:bg-primary-700"
+              className="px-5 py-2.5 rounded-xl bg-primary-600 text-white font-medium hover:bg-primary-700 transition"
             >
               Demander un rendez-vous
             </button>
           </form>
         </section>
 
+        {/* ── Liste ── */}
         <section className="bg-white rounded-xl border border-slate-200 p-6 shadow-card">
-          <h3 className="text-base font-semibold text-slate-800 mb-2">Mes rendez-vous</h3>
-          <p className="text-slate-600 text-sm mb-4">Liste des rendez-vous à venir et passés.</p>
+          <h3 className="text-base font-semibold text-slate-800 mb-4">Mes rendez-vous</h3>
           {rdvs.length === 0 ? (
             <div className="rounded-lg bg-slate-50 border border-slate-100 p-6 text-center">
               <p className="text-slate-600 text-sm">Aucun rendez-vous pour le moment.</p>
-              <p className="text-xs text-slate-500 mt-1">Utilisez le formulaire ci-dessus pour en demander un.</p>
             </div>
           ) : (
-            <ul className="space-y-4">
+            <ul className="space-y-3">
               {rdvs.map((r) => (
                 <li
                   key={r.id}
-                  className="flex justify-between items-start p-4 rounded-lg border border-slate-200"
+                  className={`rounded-xl border p-4 ${
+                    r.statut === "alt_agent" ? "border-blue-200 bg-blue-50/40" : "border-slate-200"
+                  }`}
                 >
-                  <div>
-                    <p className="font-medium text-slate-800">{r.motif || "—"}</p>
-                    <p className="text-sm text-slate-600 mt-1">
-                      {r.agent ? `${r.agent.prenom} ${r.agent.nom}` : "—"}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Demandé : {dateStr(r.date_demandee)}
-                      {r.date_proposee && ` · Proposé : ${dateStr(r.date_proposee)}`}
-                    </p>
+                  <div className="flex justify-between items-start gap-3 flex-wrap">
+                    <div>
+                      <p className="font-medium text-slate-800">{r.motif || "—"}</p>
+                      <p className="text-sm text-slate-600 mt-0.5">
+                        {r.agent ? `${r.agent.prenom} ${r.agent.nom}` : "—"}
+                      </p>
+                      <div className="text-xs text-slate-500 mt-1 space-y-0.5">
+                        <p>Date demandée : {dateStr(r.date_demandee)}</p>
+                        {r.date_proposee && (
+                          <p>
+                            Alternative conseiller :{" "}
+                            <span className="font-medium text-blue-700">{dateStr(r.date_proposee)}</span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium shrink-0 ${
+                        STATUT_STYLE[r.statut] ?? "bg-slate-100 text-slate-700"
+                      }`}
+                    >
+                      {RDV_STATUTS[r.statut] ?? r.statut}
+                    </span>
                   </div>
-                  <span className="text-xs font-medium px-2 py-1 rounded bg-primary-50 text-primary-700">
-                    {RDV_STATUTS[r.statut] ?? r.statut}
-                  </span>
                 </li>
               ))}
             </ul>

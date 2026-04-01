@@ -11,13 +11,33 @@ import { DOCUMENT_STATUTS } from "@/lib/statuts";
 type Demande = { id: string; type_nom: string | null; montant: string };
 type Document = { id: string; nom: string; statut: string; created_at: string; fichier_url?: string | null };
 
+const DOC_TYPES = [
+  { value: "", label: "— Sélectionner le type de document —", icon: "" },
+  { value: "Carte d'identité nationale (CIN)", label: "Carte d'identité nationale (CIN)", icon: "🪪" },
+  { value: "Passeport", label: "Passeport", icon: "📘" },
+  { value: "Justificatif de domicile", label: "Justificatif de domicile", icon: "🏡" },
+  { value: "Bulletin de salaire (mois 1)", label: "Bulletin de salaire – mois 1", icon: "💶" },
+  { value: "Bulletin de salaire (mois 2)", label: "Bulletin de salaire – mois 2", icon: "💶" },
+  { value: "Bulletin de salaire (mois 3)", label: "Bulletin de salaire – mois 3", icon: "💶" },
+  { value: "Attestation de travail", label: "Attestation de travail", icon: "📋" },
+  { value: "Relevé de compte bancaire", label: "Relevé de compte bancaire", icon: "🏦" },
+  { value: "RIB (Relevé d'identité bancaire)", label: "RIB (Relevé d'identité bancaire)", icon: "🏦" },
+  { value: "Avis d'imposition", label: "Avis d'imposition", icon: "📄" },
+  { value: "Compromis de vente", label: "Compromis de vente", icon: "🏠" },
+  { value: "Devis ou facture pro forma", label: "Devis ou facture pro forma", icon: "🧾" },
+  { value: "Statuts de la société", label: "Statuts de la société", icon: "🏢" },
+  { value: "Registre de commerce (RC)", label: "Registre de commerce (RC)", icon: "📑" },
+  { value: "Bilan comptable", label: "Bilan comptable", icon: "📊" },
+  { value: "Autre", label: "Autre (préciser)", icon: "✏️" },
+];
+
 export default function ClientDocuments() {
   const { isAuthenticated, role, loading } = useAuth();
   const router = useRouter();
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [selectedDemandeId, setSelectedDemandeId] = useState<string>("");
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [form, setForm] = useState({ nom: "" });
+  const [form, setForm] = useState({ nom: "", nomCustom: "" });
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
@@ -48,21 +68,23 @@ export default function ClientDocuments() {
       .catch(() => setDocuments([]));
   }, [selectedDemandeId]);
 
+  const nomFinal = form.nom === "Autre" ? form.nomCustom.trim() : form.nom;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedDemandeId || !form.nom.trim()) return;
+    if (!selectedDemandeId || !nomFinal) return;
     if (!file || file.size === 0) return;
     setUploading(true);
     try {
       const fd = new FormData();
       fd.set("demande_id", selectedDemandeId);
-      fd.set("nom", form.nom.trim());
+      fd.set("nom", nomFinal);
       fd.set("file", file);
       const r = await fetch("/api/documents", { method: "POST", credentials: "include", body: fd });
       if (r.ok) {
         const data = await r.json();
         setDocuments((prev) => [data, ...prev]);
-        setForm({ nom: "" });
+        setForm({ nom: "", nomCustom: "" });
         setFile(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
         setJustAdded(true);
@@ -138,16 +160,39 @@ export default function ClientDocuments() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nom du document</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-medium text-slate-700 mb-1">Type de document</label>
+                <select
                   value={form.nom}
-                  onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value }))}
-                  placeholder="ex. Pièce d&apos;identité"
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary-500/30 outline-none"
+                  onChange={(e) => setForm((f) => ({ ...f, nom: e.target.value, nomCustom: "" }))}
                   required
-                />
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary-500/30 outline-none"
+                >
+                  {DOC_TYPES.map((t) => (
+                    <option key={t.value} value={t.value} disabled={t.value === ""}>
+                      {t.icon ? `${t.icon}  ${t.label}` : t.label}
+                    </option>
+                  ))}
+                </select>
+                {form.nom && form.nom !== "Autre" && (
+                  <p className="mt-1.5 text-xs text-slate-400">
+                    Le fichier sera enregistré sous : <strong className="text-slate-600">{form.nom}</strong>
+                  </p>
+                )}
               </div>
+
+              {form.nom === "Autre" && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Préciser le nom</label>
+                  <input
+                    type="text"
+                    value={form.nomCustom}
+                    onChange={(e) => setForm((f) => ({ ...f, nomCustom: e.target.value }))}
+                    placeholder="ex. Attestation employeur spécifique"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary-500/30 outline-none"
+                    required
+                  />
+                </div>
+              )}
               <button
                 type="submit"
                 disabled={uploading}

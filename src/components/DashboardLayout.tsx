@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import NotificationBell from "@/components/NotificationBell";
 
 type NavItem = { href: string; label: string };
 
@@ -15,6 +16,7 @@ const adminNav: NavItem[] = [
   { href: "/dashboard/admin/statistiques", label: "Statistiques" },
   { href: "/dashboard/admin/reclamations", label: "Réclamations" },
   { href: "/dashboard/admin/types-credit", label: "Types de crédit" },
+  { href: "/dashboard/admin/assistant", label: "Assistant Q&A" },
 ];
 
 const agentNav: NavItem[] = [
@@ -28,11 +30,13 @@ const agentNav: NavItem[] = [
 const clientNav: NavItem[] = [
   { href: "/dashboard/client", label: "Tableau de bord" },
   { href: "/dashboard/client/demande", label: "Ma demande" },
+  { href: "/dashboard/client/demande/nouvelle", label: "↳ Nouvelle demande" },
   { href: "/dashboard/client/rendez-vous", label: "Rendez-vous" },
   { href: "/dashboard/client/documents", label: "Documents" },
   { href: "/dashboard/client/reclamations", label: "Réclamations" },
   { href: "/dashboard/client/nouveautes", label: "Nouveautés" },
-  { href: "/dashboard/client/documentation", label: "Documentation & types de crédit" },
+  { href: "/dashboard/client/demande/suivi", label: "Suivi demande" },
+  { href: "/dashboard/client/documentation", label: "Documentation" },
 ];
 
 export default function DashboardLayout({
@@ -90,8 +94,9 @@ export default function DashboardLayout({
         </div>
       </aside>
       <main className="flex-1 overflow-auto">
-        <header className="bg-white/80 backdrop-blur border-b border-slate-200/80 px-8 py-5 shadow-soft">
+        <header className="bg-white/80 backdrop-blur border-b border-slate-200/80 px-8 py-4 shadow-soft flex items-center justify-between">
           <h1 className="text-xl font-semibold text-slate-800">{title}</h1>
+          <NotificationBell />
         </header>
         <div className="p-8">{children}</div>
       </main>

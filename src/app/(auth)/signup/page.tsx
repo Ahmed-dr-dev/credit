@@ -77,7 +77,13 @@ export default function SignUpPage() {
         <div className="h-1.5 bg-gradient-to-r from-primary-400 to-primary-600" />
         <div className="p-8">
           <div className="text-center mb-8">
-            <Link href="/" className="font-bold text-primary-700 text-lg">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary-600 transition mb-4"
+            >
+              ← Retour à l&apos;accueil
+            </Link>
+            <Link href="/" className="block font-bold text-primary-700 text-lg">
               Crédit Bancaire
             </Link>
             <h1 className="mt-5 text-xl font-semibold text-slate-800">Inscription client</h1>
@@ -103,7 +109,7 @@ export default function SignUpPage() {
                     onChange={(e) => setPrenom(e.target.value)}
                     required
                     className={inputClass}
-                    placeholder="Jean"
+                    placeholder="Mohamed"
                     autoComplete="given-name"
                   />
                 </div>
@@ -115,7 +121,7 @@ export default function SignUpPage() {
                     onChange={(e) => setNom(e.target.value)}
                     required
                     className={inputClass}
-                    placeholder="Dupont"
+                    placeholder="Ben Ali"
                     autoComplete="family-name"
                   />
                 </div>
@@ -134,7 +140,7 @@ export default function SignUpPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className={inputClass}
-                  placeholder="vous@exemple.com"
+                  placeholder="mohamed.benali@gmail.com"
                   autoComplete="email"
                 />
               </div>
@@ -145,7 +151,7 @@ export default function SignUpPage() {
                   value={telephone}
                   onChange={(e) => setTelephone(e.target.value)}
                   className={inputClass}
-                  placeholder="06 12 34 56 78"
+                  placeholder="+216 20 123 456"
                   autoComplete="tel"
                 />
               </div>
