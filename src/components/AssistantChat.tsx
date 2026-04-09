@@ -19,6 +19,9 @@ const PLACEHOLDER_QUESTIONS = [
   "Quel est le délai de traitement ?",
   "Comment créer un compte ?",
   "Où suivre l'état de ma demande ?",
+  "Quels sont vos horaires ?",
+  "Comment vous contacter ?",
+  "Puis-je simuler mon crédit ?",
 ];
 
 const normalize = (s: string) =>
@@ -81,12 +84,60 @@ const QA: QARule[] = [
       "Si votre demande est refusée, vous pouvez contacter votre conseiller via un rendez-vous ou une réclamation pour comprendre les motifs et les options possibles (autre type de crédit, montant, documents complémentaires).",
   },
   {
-    keywords: ["bonjour", "salut", "hello", "coucou"],
-    response: "Bonjour ! Comment puis-je vous aider ? Posez-moi une question sur les crédits, les documents ou la plateforme.",
+    keywords: ["bonjour", "salut", "hello", "coucou", "bonsoir", "salam", "hi", "hey", "bjr", "bsr"],
+    response: "Bonjour ! 👋 Je suis l'assistant virtuel de BNA Crédit. Je suis là pour répondre à toutes vos questions sur nos crédits, les démarches, vos documents et votre dossier. Comment puis-je vous aider ?",
   },
   {
-    keywords: ["merci", "thanks"],
-    response: "Avec plaisir. N'hésitez pas si vous avez d'autres questions.",
+    keywords: ["merci", "thanks", "thank you", "parfait", "super", "excellent", "très bien", "nickel", "ok merci"],
+    response: "Avec plaisir ! 😊 N'hésitez pas à revenir si vous avez d'autres questions. Je suis disponible 24h/24.",
+  },
+  {
+    keywords: ["qui es tu", "qui êtes vous", "qui etes vous", "c'est quoi", "c est quoi", "assistant", "chatbot", "robot", "bot", "tu es qui", "vous etes qui"],
+    response: "Je suis l'**assistant virtuel de BNA Crédit**. Je peux répondre à vos questions sur les types de crédit, les documents nécessaires, les démarches d'inscription, le suivi de votre dossier, et bien plus. Pour une aide personnalisée, vous pouvez aussi prendre rendez-vous avec un conseiller.",
+  },
+  {
+    keywords: ["comment ca va", "comment ça va", "ca va", "ça va", "tu vas bien", "vous allez bien"],
+    response: "Je suis un assistant virtuel, donc toujours opérationnel ! 😄 Et vous, comment puis-je vous aider aujourd'hui ?",
+  },
+  {
+    keywords: ["au revoir", "bye", "a bientot", "à bientôt", "bonne journee", "bonne journée", "bonne soiree", "bonne soirée", "a plus", "ciao", "tchao"],
+    response: "À bientôt ! 👋 N'hésitez pas à revenir si vous avez d'autres questions. Bonne continuation.",
+  },
+  {
+    keywords: ["horaire", "horaires", "ouvert", "ouverture", "disponible", "quand", "heure", "heures"],
+    response: "Nos agences BNA sont généralement ouvertes **du lundi au vendredi de 8h à 16h**. La plateforme en ligne, elle, est disponible **24h/24, 7j/7**. Pour les horaires précis d'une agence, contactez-la directement ou consultez le site BNA.",
+  },
+  {
+    keywords: ["contact", "contacter", "telephone", "téléphone", "email", "adresse", "agence", "joindre", "appeler"],
+    response: "Vous pouvez contacter BNA via :\n\n• **Plateforme** : depuis votre espace client, rubrique « Réclamations » ou « Rendez-vous ».\n• **Téléphone** : centre d'appels BNA au **71 831 000** (Tunis).\n• **Email** : via le formulaire de contact sur le site officiel bna.tn.\n• **Agence** : toute agence BNA proche de chez vous.",
+  },
+  {
+    keywords: ["simulation", "simuler", "calculer", "calcul", "estimer", "estimation", "mensualite", "mensualité", "combien je vais payer"],
+    response: "Pour simuler votre crédit, connectez-vous à votre espace client et déposez une demande avec le montant et la durée souhaités. Votre conseiller calculera la mensualité estimée selon votre profil. Un outil de simulation personnalisé est aussi disponible en agence.",
+  },
+  {
+    keywords: ["plateforme", "site", "application", "comment fonctionne", "comment marche", "principe", "c'est quoi ce site"],
+    response: "Cette plateforme BNA vous permet de :\n\n1. **Créer un compte** client en ligne\n2. **Déposer une demande** de crédit (immobilier, consommation ou professionnel)\n3. **Envoyer vos documents** justificatifs\n4. **Suivre l'avancement** de votre dossier en temps réel\n5. **Prendre rendez-vous** avec votre conseiller\n\nTout se fait en ligne, de chez vous, à toute heure.",
+  },
+  {
+    keywords: ["eligible", "éligible", "eligibilite", "éligibilité", "j'ai droit", "conditions", "critere", "critère", "requisit"],
+    response: "L'éligibilité dépend de plusieurs critères : **revenus stables**, **capacité de remboursement**, **historique bancaire** et **type de crédit demandé**. Pour savoir si vous êtes éligible, créez un compte et déposez une demande — votre conseiller étudiera votre dossier et vous informera.",
+  },
+  {
+    keywords: ["apport", "apport personnel", "contribution", "mise de depart", "mise de départ"],
+    response: "Un apport personnel peut être demandé selon le type de crédit :\n\n• **Immobilier** : généralement 10 à 20 % du montant total.\n• **Consommation** : pas toujours obligatoire.\n• **Professionnel** : variable selon le projet.\n\nVotre conseiller vous précisera le montant lors de l'étude de votre dossier.",
+  },
+  {
+    keywords: ["remboursement", "rembourser", "anticipe", "anticipé", "payer en avance", "solde"],
+    response: "Le remboursement anticipé est possible selon les modalités de votre contrat de crédit. Des frais peuvent s'appliquer. Pour connaître les conditions exactes, consultez votre contrat ou contactez votre conseiller via la rubrique « Rendez-vous ».",
+  },
+  {
+    keywords: ["probleme connexion", "problème connexion", "ne marche pas", "bloque", "bloqué", "erreur", "bug", "ne fonctionne pas"],
+    response: "Si vous avez un problème technique sur la plateforme :\n\n1. Vérifiez votre connexion Internet.\n2. Effacez le cache de votre navigateur.\n3. Réessayez avec un autre navigateur.\n4. Si le problème persiste, contactez le support via la rubrique « Réclamations » ou appelez le **71 831 000**.",
+  },
+  {
+    keywords: ["securite", "sécurité", "piratage", "fraude", "arnaque", "phishing", "donnees", "données", "confidentialite", "confidentialité", "rgpd"],
+    response: "La plateforme sécurise vos données avec un **chiffrement de bout en bout** et une **authentification sécurisée par session**. Ne partagez jamais vos identifiants. BNA ne vous demandera jamais votre mot de passe par email ou téléphone. En cas de suspicion de fraude, contactez immédiatement votre agence.",
   },
   {
     keywords: ["identite", "identité", "piece", "pièce", "cni", "passeport"],
@@ -165,7 +216,8 @@ const FALLBACK =
 function getResponse(userText: string, dynamic: QARule[]): string {
   const normalized = normalize(userText);
   if (!normalized.trim()) return FALLBACK;
-  const all = dynamic.length > 0 ? dynamic : QA;
+  // Dynamic rules (admin-defined) take priority; hardcoded QA is always the fallback layer
+  const all = [...dynamic, ...QA];
   for (const { keywords, response } of all) {
     if (keywords.some((k) => normalized.includes(normalize(k)))) return response;
   }

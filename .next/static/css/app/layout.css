@@ -1818,11 +1818,11 @@ video {
   --tw-ring-opacity: 1;
   --tw-ring-color: rgb(165 180 252 / var(--tw-ring-opacity, 1));
 }
-.ring-primary-400 {
-  --tw-ring-color: var(--primary-400);
-}
 .ring-primary-300 {
   --tw-ring-color: var(--primary-300);
+}
+.ring-primary-400 {
+  --tw-ring-color: var(--primary-400);
 }
 .ring-offset-2 {
   --tw-ring-offset-width: 2px;
