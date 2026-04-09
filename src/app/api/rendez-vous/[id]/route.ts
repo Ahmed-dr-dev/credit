@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { supabaseServer, hasServiceRole } from "@/lib/supabase-server";
 import { requireAuth } from "@/lib/api-auth";
 
 async function createNotif(userId: string, message: string, rdvId: string) {
-  await supabase
-    .from("notifications")
-    .insert({ user_id: userId, message, rdv_id: rdvId, lue: false });
+  if (!hasServiceRole()) return;
+  await supabaseServer.from("notifications").insert({
+    user_id: userId,
+    message,
+    rdv_id: rdvId,
+    lue: false,
+  });
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {

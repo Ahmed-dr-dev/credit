@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import PublicNav from "@/components/PublicNav";
 
 const MIN_PASSWORD_LENGTH = 8;
 const inputClass =
@@ -72,21 +73,14 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-hero-gradient bg-grid-pattern bg-grid px-4 py-12">
+    <div className="min-h-screen flex flex-col bg-hero-gradient bg-grid-pattern bg-grid">
+      <PublicNav active="signup" />
+      <main className="flex-1 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg bg-white rounded-2xl shadow-soft border border-slate-200/80 overflow-hidden">
         <div className="h-1.5 bg-gradient-to-r from-primary-400 to-primary-600" />
         <div className="p-8">
           <div className="text-center mb-8">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary-600 transition mb-4"
-            >
-              ← Retour à l&apos;accueil
-            </Link>
-            <Link href="/" className="block font-bold text-primary-700 text-lg">
-              Crédit Bancaire
-            </Link>
-            <h1 className="mt-5 text-xl font-semibold text-slate-800">Inscription client</h1>
+            <h1 className="text-xl font-semibold text-slate-800">Inscription client</h1>
             <p className="mt-1 text-slate-500 text-sm">
               Réservé aux clients. Les comptes administration et responsables sont gérés par
               l&apos;administration.
@@ -237,6 +231,7 @@ export default function SignUpPage() {
           </p>
         </div>
       </div>
+      </main>
     </div>
   );
 }
