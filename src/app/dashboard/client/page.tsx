@@ -109,8 +109,17 @@ export default function ClientDashboard() {
     <DashboardLayout role="client" title="Mon espace">
       {compteBancaireActif === false && (
         <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
-          <p className="font-medium">Compte en attente</p>
-          <p className="text-sm mt-1">Votre compte a été créé. Pour activer votre compte bancaire et déposer une demande de crédit, présentez-vous en agence avec une pièce d&apos;identité. L&apos;administrateur activera votre compte après création du compte bancaire.</p>
+          <p className="font-semibold">⚠️ Compte en attente d&apos;activation</p>
+          <p className="text-sm mt-1 mb-3">
+            Pour déposer une demande de crédit, vous devez d&apos;abord enregistrer votre compte bancaire.
+            Si vous avez déjà un compte dans une banque tunisienne, renseignez votre RIB directement depuis la plateforme.
+          </p>
+          <Link
+            href="/dashboard/client/compte-bancaire"
+            className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 transition"
+          >
+            🏦 Enregistrer mon compte bancaire →
+          </Link>
         </div>
       )}
       {/* Welcome */}

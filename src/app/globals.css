@@ -33,3 +33,37 @@ button:focus-visible {
     text-wrap: balance;
   }
 }
+
+@media print {
+  /* Hide everything except the main content area */
+  aside,
+  header,
+  nav,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Let the main content fill the page */
+  body, html {
+    background: white !important;
+  }
+
+  main {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Remove shadows and borders for cleaner print */
+  .shadow-card, .shadow-soft {
+    box-shadow: none !important;
+  }
+
+  /* Force full width */
+  .grid {
+    break-inside: avoid;
+  }
+
+  svg {
+    break-inside: avoid;
+  }
+}

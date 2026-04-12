@@ -2,10 +2,22 @@
 
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
  
 // ── Types ──────────────────────────────────────────────────────────────────
+
+// ── Paramètres types ──────────────────────────────────────────────────────
+
+type Param = {
+  cle: string;
+  valeur: string;
+  label: string;
+  unite: string;
+  groupe: string;
+  description?: string;
+  updated_at?: string | null;
+};
 
 type KPIs = {
   total: number; enAttente: number; enCours: number; validees: number; refusees: number;
@@ -50,6 +62,21 @@ const fmt = (n: number) =>
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
 
 const MONTH_LABELS = ["Jan","Fév","Mar","Avr","Mai","Jui","Jul","Aoû","Sep","Oct","Nov","Déc"];
+
+// ── Export helpers ─────────────────────────────────────────────────────────
+
+function toCSV(rows: (string | number)[][], headers: string[]): string {
+  const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+  return [headers, ...rows].map((r) => r.map(escape).join(",")).join("\n");
+}
+
+function downloadCSV(content: string, filename: string) {
+  const blob = new Blob(["\uFEFF" + content], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
@@ -188,6 +215,24 @@ export default function AdminStatistiques() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [custom, setCustom] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
+
+  // ── Paramètres state ───────────────────────────────────────────────────
+  const [params, setParams]         = useState<Param[]>([]);
+  const [paramEdits, setParamEdits] = useState<Record<string, string>>({});
+  const [paramSaving, setParamSaving] = useState(false);
+  const [paramMsg, setParamMsg]     = useState<{ ok: boolean; text: string } | null>(null);
+  const [paramOpen, setParamOpen]   = useState(false);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) setExportOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
 
   useEffect(() => {
     if (!loading && (!isAuthenticated || role !== "admin")) router.push("/signin");
@@ -225,6 +270,106 @@ export default function AdminStatistiques() {
     load(dateFrom, dateTo);
   };
 
+  // ── Export functions ─────────────────────────────────────────────────────
+
+  const periodLabel = () => {
+    if (dateFrom && dateTo) return `${dateFrom} au ${dateTo}`;
+    if (activePreset >= 0) return PRESETS[activePreset].label;
+    return "Toute la période";
+  };
+
+  const exportCSV = () => {
+    if (!stats) return;
+    const { kpis: k, byType, agentRows } = stats;
+    const sections: string[] = [];
+
+    // KPIs
+    sections.push("INDICATEURS CLÉS");
+    sections.push(toCSV([
+      ["Total demandes", k.total],
+      ["En attente", k.enAttente],
+      ["En cours", k.enCours],
+      ["Validées", k.validees],
+      ["Refusées", k.refusees],
+      ["Taux d'acceptation (%)", k.tauxAccept],
+      ["Montant total demandé (DT)", k.montantTotal],
+      ["Montant validé (DT)", k.montantValide],
+      ["Clients inscrits", k.nbClients],
+      ["Clients avec compte bancaire", k.nbActifs],
+      ["Agents crédit", k.nbAgents],
+      ["Comptes bancaires créés", k.nbComptes],
+      ["Rendez-vous", k.nbRdv],
+      ["Rendez-vous confirmés", k.rdvConfirmes],
+    ], ["Indicateur", "Valeur"]));
+
+    // By type
+    sections.push("\nDEMANDES PAR TYPE DE CRÉDIT");
+    sections.push(toCSV(Object.entries(byType).map(([t, n]) => [t, n]), ["Type", "Nombre"]));
+
+    // Agent performance
+    sections.push("\nPERFORMANCE AGENTS");
+    sections.push(toCSV(
+      agentRows.map((a) => [a.nom, a.total, a.validees, pct(a.validees, a.total)]),
+      ["Agent", "Dossiers", "Validés", "Taux (%)"]
+    ));
+
+    // Monthly
+    sections.push("\nÉVOLUTION MENSUELLE");
+    const monthEntries = Object.entries(stats.byMonth).sort(([a], [b]) => a.localeCompare(b));
+    sections.push(toCSV(
+      monthEntries.map(([m, v]) => [m, v.total, v.validees, v.refusees]),
+      ["Mois", "Total", "Validées", "Refusées"]
+    ));
+
+    const filename = `statistiques_bna_${new Date().toISOString().slice(0, 10)}.csv`;
+    downloadCSV(sections.join("\n"), filename);
+    setExportOpen(false);
+  };
+
+  const exportPrint = () => {
+    setExportOpen(false);
+    setTimeout(() => window.print(), 200);
+  };
+
+  // ── Load parameters ─────────────────────────────────────────────────────
+  useEffect(() => {
+    if (role !== "admin") return;
+    fetch("/api/parametres", { credentials: "include" })
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: Param[]) => {
+        setParams(data);
+        const edits: Record<string, string> = {};
+        data.forEach((p) => { edits[p.cle] = p.valeur; });
+        setParamEdits(edits);
+      });
+  }, [role]);
+
+  const saveParams = async () => {
+    setParamSaving(true);
+    setParamMsg(null);
+    const body = Object.entries(paramEdits).map(([cle, valeur]) => ({ cle, valeur }));
+    const r = await fetch("/api/parametres", {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    setParamSaving(false);
+    if (r.ok) {
+      const updated: Param[] = await r.json();
+      setParams((prev) => {
+        const map: Record<string, Param> = {};
+        prev.forEach((p) => { map[p.cle] = p; });
+        updated.forEach((p) => { map[p.cle] = p; });
+        return Object.values(map);
+      });
+      setParamMsg({ ok: true, text: "Paramètres sauvegardés avec succès." });
+    } else {
+      setParamMsg({ ok: false, text: "Erreur lors de la sauvegarde." });
+    }
+    setTimeout(() => setParamMsg(null), 4000);
+  };
+
   if (!isAuthenticated || role !== "admin") return null;
 
   const k = stats?.kpis;
@@ -232,8 +377,14 @@ export default function AdminStatistiques() {
   return (
     <DashboardLayout role="admin" title="Statistiques">
 
+      {/* Print-only header */}
+      <div className="hidden print:block mb-6 border-b border-slate-300 pb-4">
+        <h1 className="text-2xl font-bold text-slate-800">Rapport statistiques — BNA Crédit</h1>
+        <p className="text-sm text-slate-500 mt-1">Période : {periodLabel()} · Généré le {new Date().toLocaleDateString("fr-FR", { dateStyle: "long" })}</p>
+      </div>
+
       {/* ── Date filter ─────────────────────────────────────────────── */}
-      <div className="mb-7 bg-white rounded-xl border border-slate-200 p-4 shadow-card flex flex-wrap gap-3 items-end">
+      <div className="mb-7 bg-white rounded-xl border border-slate-200 p-4 shadow-card flex flex-wrap gap-3 items-end print:hidden">
         <div className="flex flex-wrap gap-2">
           {PRESETS.map((p, i) => (
             <button key={p.label} onClick={() => applyPreset(i)}
@@ -272,7 +423,55 @@ export default function AdminStatistiques() {
           </div>
         )}
 
-        {fetching && <span className="ml-auto text-xs text-slate-400 animate-pulse">Chargement…</span>}
+        {fetching && <span className="text-xs text-slate-400 animate-pulse">Chargement…</span>}
+
+        {/* Export button */}
+        {stats && (
+          <div ref={exportRef} className="relative ml-auto">
+            <button
+              onClick={() => setExportOpen((v) => !v)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition shadow-soft"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+              </svg>
+              Exporter
+              <svg xmlns="http://www.w3.org/2000/svg" className={`w-3.5 h-3.5 transition-transform ${exportOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {exportOpen && (
+              <div className="absolute right-0 top-11 w-52 bg-white rounded-xl border border-slate-200 shadow-2xl z-50 overflow-hidden">
+                <button
+                  onClick={exportCSV}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition text-left"
+                >
+                  <span className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xs shrink-0">CSV</span>
+                  <div>
+                    <p className="font-medium">Exporter CSV</p>
+                    <p className="text-xs text-slate-400">Excel, Sheets…</p>
+                  </div>
+                </button>
+                <div className="border-t border-slate-100" />
+                <button
+                  onClick={exportPrint}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition text-left"
+                >
+                  <span className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                  </span>
+                  <div>
+                    <p className="font-medium">Imprimer / PDF</p>
+                    <p className="text-xs text-slate-400">Via la boîte de dialogue</p>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {!k ? (
@@ -443,6 +642,129 @@ export default function AdminStatistiques() {
           </div>
         </>
       )}
+
+      {/* ══ PARAMÈTRES SECTION ══════════════════════════════════════════ */}
+      <div className="mt-10 print:hidden">
+        {/* Collapsible header */}
+        <button
+          onClick={() => setParamOpen((v) => !v)}
+          className="w-full flex items-center justify-between bg-white rounded-xl border border-slate-200 px-6 py-4 shadow-card hover:bg-slate-50 transition group"
+        >
+          <div className="flex items-center gap-3">
+            <span className="w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-700 shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+            </span>
+            <div className="text-left">
+              <p className="text-base font-semibold text-slate-800">Paramètres des crédits</p>
+              <p className="text-xs text-slate-500 mt-0.5">Taux d&apos;intérêt, durées maximales, montants, frais</p>
+            </div>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" className={`w-5 h-5 text-slate-400 transition-transform ${paramOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {paramOpen && (
+          <div className="mt-3 bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
+            {/* Info banner */}
+            <div className="bg-indigo-50 border-b border-indigo-100 px-6 py-3 flex items-start gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-xs text-indigo-700">Ces paramètres sont utilisés lors du calcul des échéances et de la vérification d&apos;éligibilité des demandes de crédit.</p>
+            </div>
+
+            <div className="p-6">
+              {params.length === 0 ? (
+                <p className="text-slate-400 text-sm text-center py-8">Chargement des paramètres…</p>
+              ) : (
+                (() => {
+                  const GROUPES: { key: string; label: string; icon: string; color: string }[] = [
+                    { key: "taux",    label: "Taux d'intérêt annuels",   icon: "📈", color: "bg-indigo-50 border-indigo-100" },
+                    { key: "duree",   label: "Durées maximales",         icon: "🗓️",  color: "bg-amber-50 border-amber-100" },
+                    { key: "montant", label: "Montants maximaux",        icon: "💰", color: "bg-emerald-50 border-emerald-100" },
+                    { key: "frais",   label: "Frais & conditions",       icon: "📋", color: "bg-rose-50 border-rose-100" },
+                  ];
+                  return (
+                    <div className="space-y-7">
+                      {GROUPES.map((g) => {
+                        const items = params.filter((p) => p.groupe === g.key);
+                        if (items.length === 0) return null;
+                        return (
+                          <div key={g.key}>
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className="text-base">{g.icon}</span>
+                              <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">{g.label}</h4>
+                            </div>
+                            <div className={`rounded-xl border p-4 ${g.color} grid gap-4 sm:grid-cols-2 lg:grid-cols-3`}>
+                              {items.map((p) => (
+                                <div key={p.cle} className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
+                                  <label className="block text-xs font-medium text-slate-700 mb-1">{p.label}</label>
+                                  {p.description && (
+                                    <p className="text-[11px] text-slate-400 mb-2 leading-tight">{p.description}</p>
+                                  )}
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      value={paramEdits[p.cle] ?? p.valeur}
+                                      onChange={(e) =>
+                                        setParamEdits((prev) => ({ ...prev, [p.cle]: e.target.value }))
+                                      }
+                                      className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none bg-slate-50 font-mono"
+                                    />
+                                    <span className="text-xs text-slate-500 font-medium shrink-0 bg-slate-100 px-2 py-1.5 rounded-md">{p.unite}</span>
+                                  </div>
+                                  {p.updated_at && (
+                                    <p className="text-[10px] text-slate-300 mt-1.5">
+                                      Modifié le {new Date(p.updated_at).toLocaleDateString("fr-FR")}
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Save bar */}
+                      <div className="flex items-center justify-between border-t border-slate-100 pt-5 gap-4">
+                        {paramMsg ? (
+                          <p className={`text-sm font-medium ${paramMsg.ok ? "text-emerald-600" : "text-red-600"}`}>
+                            {paramMsg.ok ? "✓ " : "✗ "}{paramMsg.text}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-slate-400">Les modifications ne sont appliquées qu&apos;après sauvegarde.</p>
+                        )}
+                        <button
+                          onClick={saveParams}
+                          disabled={paramSaving}
+                          className="px-6 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-50 shadow-soft flex items-center gap-2 shrink-0"
+                        >
+                          {paramSaving ? (
+                            <>
+                              <svg className="w-4 h-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                              </svg>
+                              Sauvegarde…
+                            </>
+                          ) : (
+                            "Sauvegarder les paramètres"
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </DashboardLayout>
   );
 }

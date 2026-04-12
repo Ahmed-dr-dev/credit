@@ -211,17 +211,20 @@ const QA: QARule[] = [
 ];
 
 const FALLBACK =
-  "Je n'ai pas trouvé de réponse précise à votre question. Vous pouvez reformuler ou consulter la page « Documentation & types de crédit » après connexion. Pour un suivi personnalisé de votre dossier, connectez-vous et utilisez « Ma demande » ou réservez un rendez-vous avec votre conseiller.";
+  "Je n'ai pas trouvé de réponse précise à votre question. Elle a été transmise à notre équipe qui y répondra prochainement. Vous pouvez aussi reformuler ou consulter « Documentation & types de crédit » après connexion.";
 
-function getResponse(userText: string, dynamic: QARule[]): string {
+function getResponse(
+  userText: string,
+  dynamic: QARule[]
+): { text: string; matched: boolean } {
   const normalized = normalize(userText);
-  if (!normalized.trim()) return FALLBACK;
-  // Dynamic rules (admin-defined) take priority; hardcoded QA is always the fallback layer
+  if (!normalized.trim()) return { text: FALLBACK, matched: false };
   const all = [...dynamic, ...QA];
   for (const { keywords, response } of all) {
-    if (keywords.some((k) => normalized.includes(normalize(k)))) return response;
+    if (keywords.some((k) => normalized.includes(normalize(k))))
+      return { text: response, matched: true };
   }
-  return FALLBACK;
+  return { text: FALLBACK, matched: false };
 }
 
 type RemoteQA = { id: string; keywords: string; response: string };
@@ -267,7 +270,17 @@ export default function AssistantChat({ compact = false }: AssistantChatProps) {
     };
     setMessages((m) => [...m, userMsg]);
     setInput("");
-    const reply = getResponse(trimmed, dynamicQA);
+    const { text: reply, matched } = getResponse(trimmed, dynamicQA);
+
+    // If no match, silently report the question to the admin queue
+    if (!matched) {
+      fetch("/api/assistant-pending", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: trimmed }),
+      }).catch(() => {});
+    }
+
     setTimeout(() => {
       setMessages((m) => [
         ...m,

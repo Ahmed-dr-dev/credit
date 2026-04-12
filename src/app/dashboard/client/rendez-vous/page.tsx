@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
@@ -47,6 +47,12 @@ function RendezVousContent() {
     date_demandee: "",
   });
 
+  // Availability check
+  type Availability = "idle" | "checking" | "available" | "unavailable";
+  const [availability, setAvailability] = useState<Availability>("idle");
+  const [conflictInfo, setConflictInfo] = useState<string | null>(null);
+  const checkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Counter-proposal state
   const [contreId, setContreId] = useState<string | null>(null);
   const [contreDate, setContreDate] = useState("");
@@ -78,9 +84,45 @@ function RendezVousContent() {
     }));
   }, [demandeParam, motifParam]);
 
+  // Check availability whenever agent or date changes (debounced 600ms)
+  useEffect(() => {
+    if (!form.agent_id || !form.date_demandee) {
+      setAvailability("idle");
+      setConflictInfo(null);
+      return;
+    }
+    setAvailability("checking");
+    setConflictInfo(null);
+    if (checkTimer.current) clearTimeout(checkTimer.current);
+    checkTimer.current = setTimeout(async () => {
+      try {
+        const qs = new URLSearchParams({
+          agent_id: form.agent_id,
+          date: new Date(form.date_demandee).toISOString(),
+        });
+        const r = await fetch(`/api/rendez-vous/disponibilite?${qs}`, { credentials: "include" });
+        const data = await r.json();
+        if (data.available) {
+          setAvailability("available");
+        } else {
+          setAvailability("unavailable");
+          const d = data.conflict?.date
+            ? new Date(data.conflict.date).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" })
+            : null;
+          setConflictInfo(
+            `Ce conseiller a déjà un rendez-vous ${d ? `le ${d}` : "à cet horaire"}. Veuillez choisir un créneau espacé d'au moins 1 heure.`
+          );
+        }
+      } catch {
+        setAvailability("idle");
+      }
+    }, 600);
+  }, [form.agent_id, form.date_demandee]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.agent_id || !form.motif.trim()) return;
+    if (availability === "unavailable") return;
     const r = await fetch("/api/rendez-vous", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -267,15 +309,34 @@ function RendezVousContent() {
                 value={form.date_demandee}
                 min={new Date(Date.now() + 86400000).toISOString().slice(0, 16)}
                 onChange={(e) => setForm((f) => ({ ...f, date_demandee: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary-500/30 outline-none"
+                className={`w-full px-4 py-2.5 rounded-xl border focus:ring-2 outline-none transition ${
+                  availability === "unavailable"
+                    ? "border-red-400 focus:ring-red-500/30 bg-red-50"
+                    : availability === "available"
+                    ? "border-green-400 focus:ring-green-500/30 bg-green-50"
+                    : "border-slate-300 focus:ring-primary-500/30"
+                }`}
               />
-              {form.date_demandee && (
-                <p className="mt-1 text-xs text-slate-400">
-                  {new Date(form.date_demandee).toLocaleString("fr-FR", {
-                    dateStyle: "long",
-                    timeStyle: "short",
-                  })}
+
+              {/* Availability feedback */}
+              {form.date_demandee && availability === "checking" && (
+                <p className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-500 animate-pulse">
+                  <span className="w-3 h-3 rounded-full border-2 border-slate-400 border-t-transparent animate-spin inline-block" />
+                  Vérification de la disponibilité…
                 </p>
+              )}
+              {availability === "available" && (
+                <p className="mt-1.5 flex items-center gap-1.5 text-xs text-emerald-700 font-medium">
+                  <span className="text-emerald-500">✓</span> Créneau disponible
+                </p>
+              )}
+              {availability === "unavailable" && conflictInfo && (
+                <p className="mt-1.5 flex items-start gap-1.5 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  <span className="shrink-0 mt-0.5">⚠️</span> {conflictInfo}
+                </p>
+              )}
+              {form.date_demandee && availability === "idle" && !form.agent_id && (
+                <p className="mt-1 text-xs text-slate-400">Sélectionnez un conseiller pour vérifier la disponibilité.</p>
               )}
             </div>
 
@@ -293,7 +354,8 @@ function RendezVousContent() {
 
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl bg-primary-600 text-white font-medium hover:bg-primary-700 transition"
+              disabled={availability === "unavailable" || availability === "checking"}
+              className="px-5 py-2.5 rounded-xl bg-primary-600 text-white font-medium hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Demander un rendez-vous
             </button>

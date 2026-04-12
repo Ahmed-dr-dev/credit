@@ -1,11 +1,25 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter, usePathname } from "next/navigation";
 
 type Active = "signin" | "signup" | null;
 
 export default function PublicNav({ active = null }: { active?: Active }) {
   const link = "px-4 py-2 rounded-xl text-slate-600 hover:text-primary-600 hover:bg-primary-50 text-sm font-medium transition";
   const activeLink = "px-4 py-2 rounded-xl text-primary-700 bg-primary-50 text-sm font-medium";
+
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const handleAccueil = () => {
+    if (pathname === "/") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      router.push("/");
+    }
+  };
 
   return (
     <header className="border-b border-primary-100/80 bg-white/70 backdrop-blur-md shadow-soft sticky top-0 z-40">
@@ -22,6 +36,12 @@ export default function PublicNav({ active = null }: { active?: Active }) {
           <span className="font-bold text-primary-700 text-lg tracking-tight">Crédit Bancaire</span>
         </Link>
         <nav className="flex gap-2 items-center">
+          <button
+            onClick={handleAccueil}
+            className={`${link} hidden sm:inline-flex`}
+          >
+            Accueil
+          </button>
           <Link href="/#comment-ca-marche" className={`${link} hidden sm:inline-flex`}>
             Comment ça marche
           </Link>
