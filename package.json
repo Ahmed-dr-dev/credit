@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node -e \"const {execSync}=require('child_process');const ip=require('os').networkInterfaces();const addr=Object.values(ip).flat().find(i=>i.family==='IPv4'&&!i.internal)?.address;console.log('\\n  Network: http://'+addr+':3000\\n');\" && next dev --hostname 0.0.0.0",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
