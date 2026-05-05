@@ -6,7 +6,7 @@ function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focu
     <View style={styles.tabItem}>
       <Text style={styles.emoji}>{emoji}</Text>
       <Text style={[styles.label, focused && styles.labelActive]}>{label}</Text>
-    </View>  
+    </View>   
   );
 }
 
